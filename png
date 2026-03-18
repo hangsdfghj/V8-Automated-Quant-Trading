@@ -1,0 +1,54 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
+
+# === 產出資產曲線圖 ===
+def plot_equity_curve(df):
+    """
+    輸入: df 必須包含 '日期', '次日漲跌幅', '信心度' (或 '狙擊訊號')
+    """
+    # 這裡我們用一個簡單的示例邏輯來生成收益
+    # 在你的真實專案中，這裡應該是根據你的策略產出的實際每筆收益
+    
+    # 篩選出大於門檻的訊號
+    df_signal = df[df['信心度'] > 0.71].copy()
+    
+    # 計算累積報酬 (這裡假設每次交易一單位，並扣除交易成本)
+    cost = 0.0038
+    df_signal['策略報酬'] = (df_signal['次日漲跌幅'] - cost).cumsum()
+    
+    # 為了比較，我們也計算「無策略（只持有）」的累積報酬 (簡單累加)
+    df['持有報酬'] = df['次日漲跌幅'].cumsum()
+    
+    # 繪圖
+    plt.figure(figsize=(12, 6))
+    plt.plot(df_signal['日期'], df_signal['策略報酬'] * 100, label='V8 狙擊策略', color='#1f77b4', lw=2)
+    plt.plot(df['日期'], df['持有報酬'] * 100, label='市場平均 (無策略)', color='gray', linestyle='--', alpha=0.7)
+    
+    # 美化圖表
+    plt.title('V8 量化狙擊系統：累積報酬率回測 (2023-2025)', fontsize=16)
+    plt.xlabel('時間', fontsize=12)
+    plt.ylabel('累積報酬率 (%)', fontsize=12)
+    plt.axhline(0, color='black', lw=1)
+    
+    # 設定 X 軸日期格式
+    plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
+    plt.gca().xaxis.set_major_locator(mdates.MonthLocator(interval=3))
+    plt.gcf().autofmt_xdate() # 自動旋轉日期標籤
+    
+    plt.legend()
+    plt.grid(True, which='both', linestyle='--', linewidth=0.5)
+    plt.tight_layout()
+    
+    # 儲存圖片
+    plt.savefig('equity_curve.png', dpi=300)
+    print("✅ 資產曲線圖已儲存為 'equity_curve.png'")
+
+# 模擬數據調用示例
+# 請將這裡替換為你實際讀取數據庫的程式碼
+df_mock = pd.DataFrame({
+    '日期': pd.date_range(start='2023-01-01', periods=100, freq='D'),
+    '次日漲跌幅': [0.012, -0.005, 0.018, 0.001, -0.010] * 20, # 隨機示例
+    '信心度': [0.75, 0.60, 0.82, 0.68, 0.55] * 20 # 隨機示例
+})
+plot_equity_curve(df_mock)
