@@ -1,10 +1,10 @@
-# 🚀 V8 智慧量化狙擊系統：基於 Stacking 集成學習之台股交易框架
+# 基於 Stacking 集成學習之期、現貨價差量化交易系統
 
 ![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)
 ![Scikit-Learn](https://img.shields.io/badge/Scikit--Learn-Latest-orange.svg)
 ![License](https://img.shields.io/badge/License-MIT-green.svg)
 
-## 📖 專案概述：AI 狙擊手故事
+## 📖 專案概述：
 在台股市場中，期貨與現貨之間的「基差（Basis）」往往隱含了法人大戶的情緒轉折。本專案開發了一個自動化「AI 狙擊手」，透過監控期現貨價差、動量指標及波動率，精準捕捉權值股次日漲幅超過 **1.5%** 的噴發瞬間。
 
 本系統實現了從 **數據自動採集 (Scraping)**、**特徵工程 (Feature Engineering)**、**模型推論 (Stacking Model)** 到 **多平台自動化戰報推送 (Deployment)** 的全流程閉環。
