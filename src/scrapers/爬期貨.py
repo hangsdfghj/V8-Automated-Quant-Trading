@@ -58,7 +58,7 @@ def scrape_yahoo_all_in_one(target_list):
 
             actions = ActionChains(driver)
             last_date = ""
-            target_range = candles[-30:] # 抓最後 30 筆
+            target_range = candles[-30:] # 抓最後 20 筆
 
             for candle in target_range:
                 try:
@@ -113,9 +113,5 @@ def scrape_yahoo_all_in_one(target_list):
 
 if __name__ == "__main__":
     # 你可以在這裡列出所有想要抓的標的代碼
-    stock_targets = ["WIRF&", "WCDF&", "WIJF&", "WFGF&", "WCNF&", "WDLF&", "WCBF&", "WDOF&", "WPJF&",
-                     "WCFF&", "WUFF&", "WCMF&", "WFRF&", "WLCF&", "WDEF&", "WDNF&", "WCLF&", "WFQF&",
-                     "WLOF&", "WGRF&", "WRAF&", "WRKF&", "WCZF&", "WCAF&", "WCYF&", "WMJF&", "WJMF&",
-                     "WLXF&", "WCKF&", "WDPF&", "WCQF&", "WJBF&", "WCEF&", "WOPF&", "WFZF&", "WCJF&", 
-                     "WDJF&", "WLTF&", "WDKF&", "WDXF&", "WPVF&", "WDVF&", "WCCF&", "WDHF&"] 
+    stock_targets = ["WIRF&", "WCDF&"] 
     scrape_yahoo_all_in_one(stock_targets)
