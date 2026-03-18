@@ -8,15 +8,21 @@ import warnings
 warnings.filterwarnings("ignore")
 
 # ==========================================
-# 1. 系統設定與路徑初始化
+# 1. 系統設定與路徑初始化 (關鍵修改：路徑自動化)
 # ==========================================
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-os.chdir(BASE_DIR)
+# 取得目前檔案所在的目錄 (src/core)
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 
-DATA_FILE = 'V8_特徵整合總表_含原始數據.csv'
+# 定義模型資料夾路徑 (往上兩層進入 models)
+MODEL_DIR = os.path.normpath(os.path.join(CURRENT_DIR, "../../models"))
+# 定義資料夾根目錄路徑 (往上兩層)
+ROOT_DIR = os.path.normpath(os.path.join(CURRENT_DIR, "../../"))
+
+# 檔案路徑設定
+DATA_FILE = os.path.join(ROOT_DIR, 'V8_特徵整合總表_含原始數據.csv')
 THRESHOLD = 0.71 
 TODAY_STR = datetime.now().strftime('%Y%m%d')
-OUTPUT_NAME = f"今日狙擊清單_{TODAY_STR}.xlsx"
+OUTPUT_NAME = os.path.join(ROOT_DIR, f"今日狙擊清單_{TODAY_STR}.xlsx")
 
 FEATURES_IN_MODEL = ['基差率', '基差率變動', '成交量比率', '乖離率', '乖離變動', 'RSI', 'ATR_Pct']
 
@@ -32,31 +38,33 @@ def get_tw_tick_size(price):
 def apply_tw_tick_floor(price):
     """對齊台股跳動單位並執行無條件捨去"""
     tick = get_tw_tick_size(price)
-    # 透過精度修正後執行 floor
     return np.floor(np.round(price / tick, 8)) * tick
 
 def generate_sniper_report():
-    print(f"⏳ 正在啟動 V8.0 ATR 波動導向預測引擎...")
+    print(f"⏳ 正在從 {CURRENT_DIR} 啟動 V8.0 ATR 預測引擎...")
 
+    # --- 讀取數據 ---
     try:
         df = pd.read_csv(DATA_FILE, encoding='utf-8-sig')
-    except:
-        print(f"❌ 找不到特徵檔 [{DATA_FILE}]")
+        print(f"✅ 成功讀取數據表：{DATA_FILE}")
+    except Exception as e:
+        print(f"❌ 找不到特徵檔，請確認檔案是否在根目錄：{e}")
         return
 
     df['日期'] = pd.to_datetime(df['日期'])
     df = df.sort_values(['標的名稱', '日期'])
-    # 確保特徵完整
     df['乖離變動'] = df.groupby('標的名稱')['乖離率'].diff()
     df = df.rename(columns={'現貨RSI': 'RSI'})
 
+    # --- 載入模型 (路徑修改為從 MODEL_DIR 讀取) ---
     try:
-        rf = joblib.load('rf_v8_model.pkl')
-        gb = joblib.load('gb_v8_model.pkl')
-        meta = joblib.load('meta_v8_model.pkl')
-        scaler = joblib.load('scaler_v8.pkl')
+        rf = joblib.load(os.path.join(MODEL_DIR, 'rf_v8_model.pkl'))
+        gb = joblib.load(os.path.join(MODEL_DIR, 'gb_v8_model.pkl'))
+        meta = joblib.load(os.path.join(MODEL_DIR, 'meta_v8_model.pkl'))
+        scaler = joblib.load(os.path.join(MODEL_DIR, 'scaler_v8.pkl'))
+        print("✅ 模型與標準化組件全數載入成功！")
     except Exception as e:
-        print(f"❌ 模型載入失敗：{e}")
+        print(f"❌ 模型載入失敗，請確認檔案是否在 models/ 資料夾內：{e}")
         return
 
     # 提取最後一筆數據進行預測
@@ -73,28 +81,20 @@ def generate_sniper_report():
     
     latest_data['信心度'] = confidence
 
-    # ==========================================
-    # 2. 轉換格式 (進場價：收盤價 + 0.1 * ATR)
-    # ==========================================
+    # --- 轉換格式 ---
     sniper_list = latest_data[latest_data['信心度'] > THRESHOLD].copy()
 
     if sniper_list.empty:
-        print("💡 今日無標的符合門檻。")
+        print(f"💡 今日無標的符合門檻 ({THRESHOLD:2%})。")
         return
 
     sniper_list['股票代碼'] = sniper_list['標的名稱'].str.extract(r'\((\d+)\)')
-    
-    # 【核心修正】改用 ATR 計算建議進場點
-    # 我們取收盤價加上 0.1 倍的 ATR 波動金額，作為追價上限
-    # 公式：收盤價 * (1 + 0.1 * ATR_Pct)
     raw_suggested = sniper_list['現貨收盤價'] * (1 + 0.1 * sniper_list['ATR_Pct'])
     sniper_list['建議進場點'] = raw_suggested.apply(apply_tw_tick_floor)
-    
     sniper_list['信心度比例'] = sniper_list['信心度'].apply(lambda x: f"{x:.2%}")
     
     def get_reason(row):
         reasons = []
-        # 直接揭露特徵數值，展現量化嚴謹度
         reasons.append(f"基差率 {row['基差率']:.2%}")
         reasons.append(f"乖離變動 {row['乖離變動']:.2%}")
         reasons.append(f"ATR 波動率 {row['ATR_Pct']:.1%}")
@@ -103,9 +103,10 @@ def generate_sniper_report():
         
     sniper_list['進場原因'] = sniper_list.apply(get_reason, axis=1)
 
+    # --- 輸出結果 ---
     final_output = sniper_list[['股票代碼', '建議進場點', '信心度比例', '進場原因']]
     final_output.to_excel(OUTPUT_NAME, index=False)
-    print(f"✅ 專業版狙擊清單(ATR-Tick版)已產出：{OUTPUT_NAME}")
+    print(f"✨ 專業版狙擊清單已產出至根目錄：{OUTPUT_NAME}")
 
 if __name__ == "__main__":
     generate_sniper_report()
